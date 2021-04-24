@@ -1,7 +1,6 @@
-# Original source code from "Mastering Bitcoin" by Andreas M. Antonopoulos and
-# open_wallet.py by davidbarton: https://gist.github.com/davidbarton/5312189#file-open_wallet-py-L1
+# Original source code from "Mastering Bitcoin" by Andreas M. Antonopoulos
 
-# Dependencies:
+# DEPENDENCIES:
 #       ecdsa:          pip install ecdsa
 #       bitcoin         pip install bitcoin
 
