@@ -3,21 +3,26 @@
 
 # Dependencies:
 #       ecdsa:          pip install ecdsa
-#       pycryptodome:   pip install pycryptodome
+#       bitcoin         pip install bitcoin
 
+
+# EXECUTION:
+#
 #       python .\gen_BTC_address_from_point_curve.py
 # 
 # Example output:
-#       Secret:  114061222202366649671227529824392808850943239518307014538914206129784427369312
-#       Elliptic Curve point: (77157914653301193822618917257536926206048290956350968644684726692613576043223,23134012828889986758439068916210517134330966611504246855273296678132029683708)
-#       BTC public key (HEX): 04aa95d5040ff96299356e3028d872d91d0221ccb459d6b40a4db6fcc536c9aad733256322c0004bc8fa10e24f86214637a961c3ce8625206369260054b04577fc
-#       BTC public address:  1fDvth9hUPHdqA9XsbVACxDMdFrzj8ZAVPbskkw1xeKcL3qNBb9HmadYGLzZfAfpWqKfeZCZqrUYif82EHZ99G4XNuk
+#       Secret:  0x3aba4162c7251c891207b747840551a71939b0de081f85c4e44cf7c13e41daa6
+#       Elliptic Curve point: (416373..., 163889...)
+#       BTC public key uncompressed (HEX): 045c0de3b9...
+#       BTC public key compressed (HEX): 025c0de3b9c8ab18dd04e3511243ec2952002dbfadc864b9628910169d9b9b00ec
+#       BTC public address uncompressed:  1thMirt546nngXqyPEz532S8fLwbozud8
+#       BTC public address compressed:  14cxpo3MBCYYWCgF74SWTdcmxipnGUsPw3
 
 
 import ecdsa
 import os
-from Crypto.Hash import RIPEMD160
 import hashlib
+import bitcoin
 
 # Prime number of field
 _p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
@@ -53,8 +58,7 @@ generator = generator_secp256k1
 def random_secret():
     # 32 Bytes -> 32 * 8 bits = 2^5 * 2^3 bits = 2^8 bits = 256 bits randomly chosen
     byte_array = (os.urandom(32)).hex()
-
-    return int(byte_array,16) # Returs the randomly generated number in base 16
+    return byte_array
 
 
 def get_point_pubkey_compressed(point):
@@ -72,96 +76,33 @@ def get_point_pubkey_uncompressed(point):
 
 
 
-
-
-################################################################################################################
-########################## Functions to transition from PUBLIC KEY to BITCOIN ADDRESS ##########################
-################################################################################################################
-
-
-addrtype = 0
-__b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-__b58base = len(__b58chars)
-
-
-def Hash(data):
-    return hashlib.sha256(hashlib.sha256(data.encode('utf-8')).digest()).digest()
-
-
-def public_key_to_bc_address(public_key):
-	h160 = hash_160(public_key)
-	return hash_160_to_bc_address(h160)
-
-
-def hash_160(public_key):
-    try:
-        md = hashlib.new('ripemd160')
-        md.update(hashlib.sha256(public_key.encode('utf-8')).digest())
-        return md.digest()
-    except:
-        md = RIPEMD160.new(hashlib.sha256(public_key.encode('utf-8')).digest())
-        return md.digest()
-
-
-def hash_160_to_bc_address(h160):
-	vh160 = chr(addrtype) + str(h160)
-	h = Hash(vh160)
-	addr = vh160 + str(h[0:4])
-	return b58encode(addr)
-
-
-def b58encode(v):
-    # encode v, which is a string of bytes, to base58
-    long_value = 0
-    for (i, c) in enumerate(v[::-1]):
-        long_value += (256**i) * ord(c)
-
-    result = ''
-    while long_value >= __b58base:
-        div, mod = divmod(long_value, __b58base)
-        result = __b58chars[mod] + result
-        long_value = div
-    result = __b58chars[long_value] + result
-
-	# Bitcoin does a little leading-zero-compression: leading 0-bytes in the input become leading-1s
-    nPad = 0
-    for c in v:
-        if c == '\0': nPad += 1
-        else: break
-
-    return (__b58chars[0]*nPad) + result
-
-
-################################################################################################################
-########################## Functions to transition from PUBLIC KEY to BITCOIN ADDRESS ##########################
-################################################################################################################
-
-
-
-
-
 def main():
-    # Generate a new private key.
-    secret = random_secret()
+
+    # Generate a new private key: secret = random_secret()
+
+    # Testing purposes, same private key as the one used in "Mastering Bitcoin"
+    secret = hex(26563230048437957592232553826663696440606756685920117476832299673293013768870)
     print("Secret: ", secret)
 
 
     # Get the public key point.
-    point = secret * generator
+    secretBase16 = int(secret, 16)
+    point = secretBase16 * generator
     print("Elliptic Curve point:", point)
 
 
-    publicKey = get_point_pubkey_uncompressed(point);
-    print("BTC public key (HEX):", publicKey)
+    publicKeyUncompressed = get_point_pubkey_uncompressed(point);
+    publicKeyCompressed = get_point_pubkey_compressed(point);
+
+    print("BTC public key uncompressed (HEX):", publicKeyUncompressed)
+    print("BTC public key compressed (HEX):", publicKeyCompressed)
 
 
-    # Given the point (x, y) we can create the object using:
-    point1 = ecdsa.ellipticcurve.Point(curve, point.x(), point.y(), ec_order)
-    assert(point1 == point)
+    btc_address_uncompressed = bitcoin.pubkey_to_address(publicKeyUncompressed);
+    btc_address_compressed = bitcoin.pubkey_to_address(publicKeyCompressed)
 
-
-    BTC_addrres = public_key_to_bc_address(publicKey)
-    print("BTC public address: ", BTC_addrres);
+    print("BTC public address uncompressed: ", btc_address_uncompressed);
+    print("BTC public address compressed: ", btc_address_compressed );
 
 
 
